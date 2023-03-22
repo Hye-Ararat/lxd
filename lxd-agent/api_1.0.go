@@ -92,18 +92,18 @@ func setConnectionInfo(d *Daemon, rd io.Reader) error {
 func api10Put(d *Daemon, r *http.Request) response.Response {
 	err := setConnectionInfo(d, r.Body)
 	if err != nil {
-		return response.ErrorResponse(http.StatusInternalServerError, err.Error())
+		return response.ErrorResponse(http.StatusInternalServerError, err.Error(), nil)
 	}
 
 	// Try connecting to LXD server.
 	client, err := getClient(int(d.serverCID), int(d.serverPort), d.serverCertificate)
 	if err != nil {
-		return response.ErrorResponse(http.StatusInternalServerError, err.Error())
+		return response.ErrorResponse(http.StatusInternalServerError, err.Error(), nil)
 	}
 
 	server, err := lxd.ConnectLXDHTTP(nil, client)
 	if err != nil {
-		return response.ErrorResponse(http.StatusInternalServerError, err.Error())
+		return response.ErrorResponse(http.StatusInternalServerError, err.Error(), nil)
 	}
 
 	defer server.Disconnect()
@@ -118,7 +118,7 @@ func api10Put(d *Daemon, r *http.Request) response.Response {
 	}
 
 	if err != nil {
-		return response.ErrorResponse(http.StatusInternalServerError, err.Error())
+		return response.ErrorResponse(http.StatusInternalServerError, err.Error(), nil)
 	}
 
 	return response.EmptySyncResponse

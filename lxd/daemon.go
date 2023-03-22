@@ -422,7 +422,7 @@ func writeMacaroonsRequiredResponse(b *identchecker.Bakery, r *http.Request, w h
 	m, err := b.Oven.NewMacaroon(
 		ctx, httpbakery.RequestVersion(r), caveats, derr.Ops...)
 	if err != nil {
-		resp := response.ErrorResponse(http.StatusInternalServerError, err.Error())
+		resp := response.ErrorResponse(http.StatusInternalServerError, err.Error(), nil)
 		_ = resp.Render(w)
 		return
 	}

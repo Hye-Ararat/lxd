@@ -220,18 +220,19 @@ func (r *syncResponse) String() string {
 
 // Error response.
 type errorResponse struct {
-	code int    // Code to return in both the HTTP header and Code field of the response body.
-	msg  string // Message to return in the Error field of the response body.
+	code     int    // Code to return in both the HTTP header and Code field of the response body.
+	msg      string // Message to return in the Error field of the response body.
+	metadata any    // Metadata to return in the Metadata field of the response body.
 }
 
-// ErrorResponse returns an error response with the given code and msg.
-func ErrorResponse(code int, msg string) Response {
-	return &errorResponse{code, msg}
+// ErrorResponse returns an error response with the given code, msg, and metadata.
+func ErrorResponse(code int, msg string, metadata any) Response {
+	return &errorResponse{code, msg, metadata}
 }
 
 // BadRequest returns a bad request response (400) with the given error.
 func BadRequest(err error) Response {
-	return &errorResponse{http.StatusBadRequest, err.Error()}
+	return &errorResponse{http.StatusBadRequest, err.Error(), nil}
 }
 
 // Conflict returns a conflict response (409) with the given error.
@@ -241,7 +242,7 @@ func Conflict(err error) Response {
 		message = err.Error()
 	}
 
-	return &errorResponse{http.StatusConflict, message}
+	return &errorResponse{http.StatusConflict, message, nil}
 }
 
 // Forbidden returns a forbidden response (403) with the given error.
@@ -251,12 +252,12 @@ func Forbidden(err error) Response {
 		message = err.Error()
 	}
 
-	return &errorResponse{http.StatusForbidden, message}
+	return &errorResponse{http.StatusForbidden, message, nil}
 }
 
 // InternalError returns an internal error response (500) with the given error.
 func InternalError(err error) Response {
-	return &errorResponse{http.StatusInternalServerError, err.Error()}
+	return &errorResponse{http.StatusInternalServerError, err.Error(), nil}
 }
 
 // NotFound returns a not found response (404) with the given error.
@@ -266,7 +267,7 @@ func NotFound(err error) Response {
 		message = err.Error()
 	}
 
-	return &errorResponse{http.StatusNotFound, message}
+	return &errorResponse{http.StatusNotFound, message, nil}
 }
 
 // NotImplemented returns a not implemented response (501) with the given error.
@@ -276,13 +277,13 @@ func NotImplemented(err error) Response {
 		message = err.Error()
 	}
 
-	return &errorResponse{http.StatusNotImplemented, message}
+	return &errorResponse{http.StatusNotImplemented, message, nil}
 }
 
 // PreconditionFailed returns a precondition failed response (412) with the
 // given error.
 func PreconditionFailed(err error) Response {
-	return &errorResponse{http.StatusPreconditionFailed, err.Error()}
+	return &errorResponse{http.StatusPreconditionFailed, err.Error(), nil}
 }
 
 // Unavailable return an unavailable response (503) with the given error.
@@ -292,7 +293,7 @@ func Unavailable(err error) Response {
 		message = err.Error()
 	}
 
-	return &errorResponse{http.StatusServiceUnavailable, message}
+	return &errorResponse{http.StatusServiceUnavailable, message, nil}
 }
 
 func (r *errorResponse) String() string {
@@ -311,9 +312,10 @@ func (r *errorResponse) Render(w http.ResponseWriter) error {
 	}
 
 	resp := api.ResponseRaw{
-		Type:  api.ErrorResponse,
-		Error: r.msg,
-		Code:  r.code, // Set the error code in the Code field of the response body.
+		Type:     api.ErrorResponse,
+		Error:    r.msg,
+		Code:     r.code, // Set the error code in the Code field of the response body.
+		Metadata: r.metadata,
 	}
 
 	err := json.NewEncoder(output).Encode(resp)
