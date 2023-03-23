@@ -121,3 +121,27 @@ func TestConfig_PatchKeepsValues(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, map[string]string{"core.proxy_http": "foo.bar"}, values)
 }
+
+// Every key needs a value.
+func TestConfigLoad_URLParamsValidator(t *testing.T) {
+	tx, cleanup := db.NewTestClusterTx(t)
+	defer cleanup()
+
+	config, err := clusterConfig.Load(context.Background(), tx)
+	require.NoError(t, err)
+
+	_, err = config.Patch(map[string]any{"oidc.url_params": "foo"})
+	require.EqualError(t, err, "cannot set 'oidc.url_params' to 'foo': Invalid key-value pair: key=\"foo\", value=\"\"")
+
+	_, err = config.Patch(map[string]any{"oidc.url_params": "foo="})
+	require.EqualError(t, err, "cannot set 'oidc.url_params' to 'foo=': Invalid key-value pair: key=\"foo\", value=\"\"")
+
+	_, err = config.Patch(map[string]any{"oidc.url_params": "=foo"})
+	require.EqualError(t, err, "cannot set 'oidc.url_params' to '=foo': Invalid key-value pair: key=\"\", value=\"foo\"")
+
+	_, err = config.Patch(map[string]any{"oidc.url_params": "foo=bar,,bar=foo"})
+	require.NoError(t, err)
+
+	_, err = config.Patch(map[string]any{"oidc.url_params": "foo=bar,,bar=foo"})
+	require.NoError(t, err)
+}

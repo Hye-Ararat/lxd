@@ -243,6 +243,24 @@ func (c *Config) RemoteTokenExpiry() string {
 	return c.m.GetString("core.remote_token_expiry")
 }
 
+// OIDCServer returns all the OpenID Connect settings needed to connect to a server.
+func (c *Config) OIDCServer() (string, string, map[string]string) {
+	m := make(map[string]string)
+
+	l := strings.Split(c.m.GetString("oidc.url_params"), ",")
+
+	for _, e := range l {
+		fields := strings.SplitN(e, "=", 2)
+		if len(fields) != 2 {
+			continue
+		}
+
+		m[strings.TrimSpace(fields[0])] = strings.TrimSpace(fields[1])
+	}
+
+	return c.m.GetString("oidc.issuer"), c.m.GetString("oidc.client.id"), m
+}
+
 // Dump current configuration keys and their values. Keys with values matching
 // their defaults are omitted.
 func (c *Config) Dump() map[string]any {
@@ -328,6 +346,9 @@ var ConfigSchema = config.Schema{
 	"loki.types":                     {Validator: validate.Optional(validate.IsListOf(validate.IsOneOf("lifecycle", "logging"))), Default: "lifecycle,logging"},
 	"maas.api.key":                   {},
 	"maas.api.url":                   {},
+	"oidc.issuer":                    {},
+	"oidc.client.id":                 {},
+	"oidc.url_params":                {Validator: validate.Optional(urlParamsValidator)},
 	"rbac.agent.url":                 {},
 	"rbac.agent.username":            {},
 	"rbac.agent.private_key":         {},
@@ -340,6 +361,29 @@ var ConfigSchema = config.Schema{
 	// OVN networking global keys.
 	"network.ovn.integration_bridge":    {Default: "br-int"},
 	"network.ovn.northbound_connection": {Default: "unix:/var/run/ovn/ovnnb_db.sock"},
+}
+
+func urlParamsValidator(value string) error {
+	l := strings.Split(value, ",")
+
+	for _, e := range l {
+		fields := strings.SplitN(e, "=", 2)
+		key := strings.TrimSpace(fields[0])
+		value := ""
+
+		if len(fields) == 2 {
+			value = strings.TrimSpace(fields[1])
+		}
+
+		// Ignore empty key-value pairs, and valid key-value pairs
+		if key == "" && value == "" || key != "" && value != "" {
+			continue
+		}
+
+		return fmt.Errorf("Invalid key-value pair: key=%q, value=%q", key, value)
+	}
+
+	return nil
 }
 
 func expiryValidator(value string) error {
