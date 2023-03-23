@@ -26,6 +26,7 @@ import (
 	"github.com/go-macaroon-bakery/macaroon-bakery/v3/httpbakery"
 	"github.com/gorilla/mux"
 	liblxc "github.com/lxc/go-lxc"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 	"golang.org/x/sys/unix"
 
 	"github.com/lxc/lxd/lxd/acme"
@@ -109,6 +110,7 @@ type Daemon struct {
 	proxy func(req *http.Request) (*url.URL, error)
 
 	externalAuth *externalAuth
+	oidcVerifier *oidcVerifier
 
 	// Stores last heartbeat node information to detect node changes.
 	lastNodeList *cluster.APIHeartbeat
@@ -364,7 +366,52 @@ func (d *Daemon) Authenticate(w http.ResponseWriter, r *http.Request) (bool, str
 		return false, "", "", fmt.Errorf("Bad/missing TLS on network query")
 	}
 
-	if d.externalAuth != nil && r.Header.Get(httpbakery.BakeryProtocolHeader) != "" {
+	if d.oidcVerifier != nil && r.Header.Get("X-LXD-oidc") != "" {
+		var err error
+		var claims *oidc.AccessTokenClaims
+
+		requireAuth := true
+
+		// When a client wants to authenticate, it needs to set the Authorization HTTP header like this:
+		//    Authorization Bearer <access_token>
+		// If set correctly, LXD will attempt to verify the access token, and grant access if it's valid.
+		// If the verification fails, LXD will return an InvalidToken error. The client should then either use its refresh token to get a new valid access token, or log in again.
+		// If the Authorization header is missing, LXD returns an AuthenticationRequired error.
+		// Both returned errors contain information which are needed for the client to authenticate.
+		authHeader := r.Header.Get("Authorization")
+		if authHeader != "" {
+			parts := strings.Split(authHeader, "Bearer ")
+			if len(parts) == 2 {
+				requireAuth = false
+
+				claims, err = d.oidcVerifier.VerifyAccessToken(d.shutdownCtx, parts[1])
+				if err != nil {
+					issuer, clientID, urlParams := d.globalConfig.OIDCServer()
+
+					return false, "", "", &shared.ErrOIDCAuthentication{
+						Issuer:        issuer,
+						ClientID:      clientID,
+						URLParameters: urlParams,
+						Err:           shared.InvalidToken,
+						Reason:        err.Error(),
+					}
+				}
+			}
+		}
+
+		if requireAuth {
+			issuer, clientID, urlParams := d.globalConfig.OIDCServer()
+
+			return false, "", "", &shared.ErrOIDCAuthentication{
+				Issuer:        issuer,
+				ClientID:      clientID,
+				URLParameters: urlParams,
+				Err:           shared.AuthenticationRequired,
+			}
+		}
+
+		return true, claims.Subject, "oidc", nil
+	} else if d.externalAuth != nil && r.Header.Get(httpbakery.BakeryProtocolHeader) != "" {
 		// Validate external authentication.
 		ctx := httpbakery.ContextWithRequest(context.TODO(), r)
 		authChecker := d.externalAuth.bakery.Checker.Auth(httpbakery.RequestMacaroons(r)...)
@@ -517,9 +564,11 @@ func (d *Daemon) createCmd(restAPI *mux.Router, version string, c APIEndpoint) {
 		// Authentication
 		trusted, username, protocol, err := d.Authenticate(w, r)
 		if err != nil {
-			// If not a macaroon discharge request, return the error
-			_, ok := err.(*bakery.DischargeRequiredError)
-			if !ok {
+			// If not a macaroon discharge request or OIDC authentication error return the error
+			_, dischargeRequiredErrorOK := err.(*bakery.DischargeRequiredError)
+			_, oidcErrorOK := err.(*shared.ErrOIDCAuthentication)
+
+			if !dischargeRequiredErrorOK && !oidcErrorOK {
 				_ = response.InternalError(err).Render(w)
 				return
 			}
@@ -623,6 +672,9 @@ func (d *Daemon) createCmd(restAPI *mux.Router, version string, c APIEndpoint) {
 			logger.Debug(fmt.Sprintf("Allowing untrusted %s", r.Method), logger.Ctx{"url": r.URL.RequestURI(), "ip": r.RemoteAddr})
 		} else if derr, ok := err.(*bakery.DischargeRequiredError); ok {
 			writeMacaroonsRequiredResponse(d.externalAuth.bakery, r, w, derr, d.externalAuth.expiry)
+			return
+		} else if oidcErr, ok := err.(*shared.ErrOIDCAuthentication); ok {
+			_ = response.ErrorResponse(http.StatusInternalServerError, oidcErr.Error(), oidcErr).Render(w)
 			return
 		} else {
 			logger.Warn("Rejecting request from untrusted client", logger.Ctx{"ip": r.RemoteAddr})
@@ -1352,6 +1404,7 @@ func (d *Daemon) init() error {
 	rbacAPIURL, rbacAPIKey, rbacExpiry, rbacAgentURL, rbacAgentUsername, rbacAgentPrivateKey, rbacAgentPublicKey = d.globalConfig.RBACServer()
 	d.gateway.HeartbeatOfflineThreshold = d.globalConfig.OfflineThreshold()
 	lokiURL, lokiUsername, lokiPassword, lokiCACert, lokiLabels, lokiLoglevel, lokiTypes := d.globalConfig.LokiServer()
+	oidcIssuer, oidcClientID, _ := d.globalConfig.OIDCServer()
 
 	instancePlacementScriptlet := d.globalConfig.InstancesPlacementScriptlet()
 
@@ -1377,6 +1430,14 @@ func (d *Daemon) init() error {
 	// Setup Candid authentication.
 	if candidAPIURL != "" {
 		err = d.setupExternalAuthentication(candidAPIURL, candidAPIKey, candidExpiry, candidDomains)
+		if err != nil {
+			return err
+		}
+	}
+
+	// oidcClientID is necessary for OIDC to work, but it's not needed for the offline access token validation.
+	if oidcIssuer != "" && oidcClientID != "" {
+		d.oidcVerifier, err = NewOIDCVerifier(oidcIssuer)
 		if err != nil {
 			return err
 		}

@@ -210,6 +210,11 @@ func api10Get(d *Daemon, r *http.Request) response.Response {
 		authMethods = append(authMethods, "candid")
 	}
 
+	oidcIssuer, oidcClientID, _ := s.GlobalConfig.OIDCServer()
+	if oidcIssuer != "" && oidcClientID != "" {
+		authMethods = append(authMethods, "oidc")
+	}
+
 	srv := api.ServerUntrusted{
 		APIExtensions: version.APIExtensions,
 		APIStatus:     "stable",
@@ -718,6 +723,7 @@ func doApi10UpdateTriggers(d *Daemon, nodeChanged, clusterChanged map[string]str
 	lokiChanged := false
 	acmeDomainChanged := false
 	acmeCAURLChanged := false
+	oidcChanged := false
 
 	for key := range clusterChanged {
 		switch key {
@@ -791,6 +797,11 @@ func doApi10UpdateTriggers(d *Daemon, nodeChanged, clusterChanged map[string]str
 			acmeCAURLChanged = true
 		case "acme.domain":
 			acmeDomainChanged = true
+		case "oidc.issuer", "oidc.client.id":
+			// If the issuer changes, it's triggered because the OIDC verifier depends on the issuer.
+			// If the client ID changed, it's triggered because OIDC can only work if a client ID is present.
+			// A change to oidc.url_params doesn't trigger here because OIDC will work both with or without it, and it is used by the client only.
+			oidcChanged = true
 		}
 	}
 
@@ -955,6 +966,21 @@ func doApi10UpdateTriggers(d *Daemon, nodeChanged, clusterChanged map[string]str
 		err := scriptletLoad.InstancePlacementSet(value)
 		if err != nil {
 			return fmt.Errorf("Failed saving instance placement scriptlet: %w", err)
+		}
+	}
+
+	if oidcChanged {
+		oidcIssuer, oidcClientID, _ := clusterConfig.OIDCServer()
+
+		if oidcIssuer == "" || oidcClientID == "" {
+			d.oidcVerifier = nil
+		} else {
+			var err error
+
+			d.oidcVerifier, err = NewOIDCVerifier(oidcIssuer)
+			if err != nil {
+				return fmt.Errorf("Failed setting up OpenID Connect: %w", err)
+			}
 		}
 	}
 
