@@ -15,6 +15,7 @@ import (
 	"github.com/go-macaroon-bakery/macaroon-bakery/v3/bakery"
 	"github.com/go-macaroon-bakery/macaroon-bakery/v3/httpbakery"
 	"github.com/gorilla/websocket"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 
 	"github.com/lxc/lxd/shared"
 	"github.com/lxc/lxd/shared/api"
@@ -52,6 +53,8 @@ type ProtocolLXD struct {
 
 	clusterTarget string
 	project       string
+
+	oidcClient *oidcClient
 }
 
 // Disconnect gets rid of any background goroutines.
@@ -152,6 +155,10 @@ func (r *ProtocolLXD) DoHTTP(req *http.Request) (*http.Response, error) {
 		return r.bakeryClient.Do(req)
 	}
 
+	if r.oidcClient != nil {
+		return r.oidcClient.Do(req)
+	}
+
 	return r.http.Do(req)
 }
 
@@ -226,6 +233,17 @@ func lxdParseResponse(resp *http.Response) (*api.Response, string, error) {
 
 	// Handle errors
 	if response.Type == api.ErrorResponse {
+		if response.Error == shared.AuthenticationRequired || response.Error == shared.InvalidToken {
+			metadata := shared.ErrOIDCAuthentication{}
+
+			err := json.Unmarshal(response.Metadata, &metadata)
+			if err != nil {
+				return nil, "", fmt.Errorf("Failed unmarshalling: %w", err)
+			}
+
+			return nil, "", &metadata
+		}
+
 		return nil, "", api.StatusErrorf(resp.StatusCode, response.Error)
 	}
 
@@ -470,6 +488,15 @@ func (r *ProtocolLXD) setupBakeryClient() {
 			r.bakeryClient.AddInteractor(interactor)
 		}
 	}
+}
+
+func (r *ProtocolLXD) setupOIDCClient(token *oidc.Tokens[*oidc.IDTokenClaims]) {
+	if r.oidcClient != nil {
+		return
+	}
+
+	r.oidcClient = NewOIDCClient(token)
+	r.oidcClient.httpClient = r.http
 }
 
 // WithContext returns a client that will add context.Context.
