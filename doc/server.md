@@ -89,6 +89,7 @@ Key                                 | Type      | Scope     | Default           
 :--                                 | :---      | :----     | :------                                          | :----------
 `oidc.client.id`                    | string    | global    | -                                                | Public identifier for clients or apps
 `oidc.issuer`                       | string    | global    | -                                                | Issuer URL which issues the OIDC tokens
+`oidc.redirect_ports`               | string    | global    | -                                                | Comma-seperated list of ports supported by OIDC remote (optional)
 `oidc.url_params`                   | string    | global    | -                                                | Comma-separated list of key-value pairs which the client needs to set on login
 
 (server-options-cluster)=

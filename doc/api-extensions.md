@@ -2175,4 +2175,5 @@ This adds the following new configuration keys:
 
 * `oidc.issuer`
 * `oidc.client.id`
+* `oidc.redirect_ports`
 * `oidc.url_params`
