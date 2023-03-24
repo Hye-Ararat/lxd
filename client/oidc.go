@@ -165,7 +165,7 @@ func (o *oidcClient) getListenerAndPort(redirectPorts string) (net.Listener, int
 	for i := 0; i < 10; i++ {
 		// Get random port between 1024 and 65535.
 		port = 1024 + mrand.Int31n(math.MaxUint16-1024)
-		if len(portList) != 0 {
+		if len(portList) != 0 && portList[0] != "" {
 			if i <= len(portList) {
 				i, err := strconv.ParseInt(portList[i], 10, 32)
 				if err != nil {
