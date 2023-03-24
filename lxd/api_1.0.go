@@ -210,7 +210,7 @@ func api10Get(d *Daemon, r *http.Request) response.Response {
 		authMethods = append(authMethods, "candid")
 	}
 
-	oidcIssuer, oidcClientID, _, redirectPorts := s.GlobalConfig.OIDCServer()
+	oidcIssuer, oidcClientID, _ := s.GlobalConfig.OIDCServer()
 	if oidcIssuer != "" && oidcClientID != "" {
 		authMethods = append(authMethods, "oidc")
 	}
@@ -970,7 +970,7 @@ func doApi10UpdateTriggers(d *Daemon, nodeChanged, clusterChanged map[string]str
 	}
 
 	if oidcChanged {
-		oidcIssuer, oidcClientID, _, redirectPorts := clusterConfig.OIDCServer()
+		oidcIssuer, oidcClientID, _ := clusterConfig.OIDCServer()
 
 		if oidcIssuer == "" || oidcClientID == "" {
 			d.oidcVerifier = nil
