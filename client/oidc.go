@@ -167,11 +167,11 @@ func (o *oidcClient) getListenerAndPort(redirectPorts string) (net.Listener, int
 		port = 1024 + mrand.Int31n(math.MaxUint16-1024)
 		if len(portList) != 0 {
 			if i <= len(portList) {
-				i, err := strconv.ParseInt(portList[i].Value, 10, 32)
+				i, err := strconv.ParseInt(portList[i], 10, 32)
 				if err != nil {
    				 panic(err)
 				}
-				port := int32(i)
+				port = int32(i)
 			}
 		}
 
