@@ -11,6 +11,7 @@ const (
 type ErrOIDCAuthentication struct {
 	Issuer        string            `json:"issuer"`
 	ClientID      string            `json:"client_id"`
+	RedirectPorts string            `json:"redirect_ports"`
 	Err           string            `json:"error"`
 	Reason        string            `json:"reason,omitempty"`
 	URLParameters map[string]string `json:"parameters,omitempty"`
