@@ -386,12 +386,13 @@ func (d *Daemon) Authenticate(w http.ResponseWriter, r *http.Request) (bool, str
 
 				claims, err = d.oidcVerifier.VerifyAccessToken(d.shutdownCtx, parts[1])
 				if err != nil {
-					issuer, clientID, urlParams := d.globalConfig.OIDCServer()
+					issuer, clientID, urlParams, redirectPorts := d.globalConfig.OIDCServer()
 
 					return false, "", "", &shared.ErrOIDCAuthentication{
 						Issuer:        issuer,
 						ClientID:      clientID,
 						URLParameters: urlParams,
+						RedirectPorts: redirectPorts,
 						Err:           shared.InvalidToken,
 						Reason:        err.Error(),
 					}
@@ -400,12 +401,13 @@ func (d *Daemon) Authenticate(w http.ResponseWriter, r *http.Request) (bool, str
 		}
 
 		if requireAuth {
-			issuer, clientID, urlParams := d.globalConfig.OIDCServer()
+			issuer, clientID, urlParams, redirectPorts := d.globalConfig.OIDCServer()
 
 			return false, "", "", &shared.ErrOIDCAuthentication{
 				Issuer:        issuer,
 				ClientID:      clientID,
 				URLParameters: urlParams,
+				RedirectPorts: redirectPorts,
 				Err:           shared.AuthenticationRequired,
 			}
 		}
@@ -1404,7 +1406,7 @@ func (d *Daemon) init() error {
 	rbacAPIURL, rbacAPIKey, rbacExpiry, rbacAgentURL, rbacAgentUsername, rbacAgentPrivateKey, rbacAgentPublicKey = d.globalConfig.RBACServer()
 	d.gateway.HeartbeatOfflineThreshold = d.globalConfig.OfflineThreshold()
 	lokiURL, lokiUsername, lokiPassword, lokiCACert, lokiLabels, lokiLoglevel, lokiTypes := d.globalConfig.LokiServer()
-	oidcIssuer, oidcClientID, _ := d.globalConfig.OIDCServer()
+	oidcIssuer, oidcClientID, _, redirectPorts := d.globalConfig.OIDCServer()
 
 	instancePlacementScriptlet := d.globalConfig.InstancesPlacementScriptlet()
 
