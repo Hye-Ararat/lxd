@@ -2166,3 +2166,13 @@ Adds support for instance generation ID. The VM or container generation ID will 
 
 ## `disk_io_cache`
 This introduces a new `io.cache` property to disk devices which can be used to override the VM caching behavior.
+
+## `oidc`
+
+This adds support for OpenID Connect (OIDC) authentication.
+
+This adds the following new configuration keys:
+
+* `oidc.issuer`
+* `oidc.client.id`
+* `oidc.url_params`
