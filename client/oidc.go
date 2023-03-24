@@ -19,6 +19,7 @@ import (
 	httphelper "github.com/zitadel/oidc/v2/pkg/http"
 	"github.com/zitadel/oidc/v2/pkg/oidc"
     "strings"
+	"strconv"
 	"github.com/lxc/lxd/shared"
 )
 
@@ -164,9 +165,9 @@ func (o *oidcClient) getListenerAndPort(redirectPorts string) (net.Listener, int
 	for i := 0; i < 10; i++ {
 		// Get random port between 1024 and 65535.
 		port = 1024 + mrand.Int31n(math.MaxUint16-1024)
-		if portList.Length != 0 {
-			if i <= redirectPorts.Length {
-				i, err := strconv.ParseInt(redirectPorts[i].Value, 10, 32)
+		if len(portList) != 0 {
+			if i <= len(portList) {
+				i, err := strconv.ParseInt(portList[i].Value, 10, 32)
 				if err != nil {
    				 panic(err)
 				}
