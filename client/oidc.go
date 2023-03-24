@@ -18,7 +18,7 @@ import (
 	"github.com/zitadel/oidc/v2/pkg/client/rp/cli"
 	httphelper "github.com/zitadel/oidc/v2/pkg/http"
 	"github.com/zitadel/oidc/v2/pkg/oidc"
-
+    "strings"
 	"github.com/lxc/lxd/shared"
 )
 
@@ -80,7 +80,7 @@ func (o *oidcClient) Do(req *http.Request) (*http.Response, error) {
 
 	if errors.As(err, &oidcAuthError) {
 		if oidcAuthError.Err == shared.AuthenticationRequired {
-			err = o.authenticate(oidcAuthError.Issuer, oidcAuthError.ClientID, oidcAuthError.URLParameters)
+			err = o.authenticate(oidcAuthError.Issuer, oidcAuthError.ClientID, oidcAuthError.URLParameters, oidcAuthError.RedirectPorts)
 			if err != nil {
 				return nil, err
 			}
@@ -88,7 +88,7 @@ func (o *oidcClient) Do(req *http.Request) (*http.Response, error) {
 			err = o.refresh(oidcAuthError.Issuer, oidcAuthError.ClientID)
 			if err != nil {
 				if errors.Is(err, ErrRefreshAccessToken) {
-					err = o.authenticate(oidcAuthError.Issuer, oidcAuthError.ClientID, oidcAuthError.URLParameters)
+					err = o.authenticate(oidcAuthError.Issuer, oidcAuthError.ClientID, oidcAuthError.URLParameters, oidcAuthError.RedirectPorts)
 					if err != nil {
 						return nil, err
 					}
