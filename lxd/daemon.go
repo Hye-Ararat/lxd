@@ -1406,7 +1406,7 @@ func (d *Daemon) init() error {
 	rbacAPIURL, rbacAPIKey, rbacExpiry, rbacAgentURL, rbacAgentUsername, rbacAgentPrivateKey, rbacAgentPublicKey = d.globalConfig.RBACServer()
 	d.gateway.HeartbeatOfflineThreshold = d.globalConfig.OfflineThreshold()
 	lokiURL, lokiUsername, lokiPassword, lokiCACert, lokiLabels, lokiLoglevel, lokiTypes := d.globalConfig.LokiServer()
-	oidcIssuer, oidcClientID, _ := d.globalConfig.OIDCServer()
+	oidcIssuer, oidcClientID, _, _ := d.globalConfig.OIDCServer()
 
 	instancePlacementScriptlet := d.globalConfig.InstancesPlacementScriptlet()
 
