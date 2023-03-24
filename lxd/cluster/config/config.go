@@ -244,7 +244,7 @@ func (c *Config) RemoteTokenExpiry() string {
 }
 
 // OIDCServer returns all the OpenID Connect settings needed to connect to a server.
-func (c *Config) OIDCServer() (string, string, map[string]string) {
+func (c *Config) OIDCServer() (string, string, map[string]string, string) {
 	m := make(map[string]string)
 
 	l := strings.Split(c.m.GetString("oidc.url_params"), ",")
@@ -258,7 +258,7 @@ func (c *Config) OIDCServer() (string, string, map[string]string) {
 		m[strings.TrimSpace(fields[0])] = strings.TrimSpace(fields[1])
 	}
 
-	return c.m.GetString("oidc.issuer"), c.m.GetString("oidc.client.id"), m
+	return c.m.GetString("oidc.issuer"), c.m.GetString("oidc.client.id"), m, c.m.GetString("oidc.redirect_ports")
 }
 
 // Dump current configuration keys and their values. Keys with values matching
@@ -348,6 +348,7 @@ var ConfigSchema = config.Schema{
 	"maas.api.url":                   {},
 	"oidc.issuer":                    {},
 	"oidc.client.id":                 {},
+	"oidc.redirect_ports":            {},
 	"oidc.url_params":                {Validator: validate.Optional(urlParamsValidator)},
 	"rbac.agent.url":                 {},
 	"rbac.agent.username":            {},
