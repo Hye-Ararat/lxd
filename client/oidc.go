@@ -11,6 +11,8 @@ import (
 	mrand "math/rand"
 	"net"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -18,8 +20,6 @@ import (
 	"github.com/zitadel/oidc/v2/pkg/client/rp/cli"
 	httphelper "github.com/zitadel/oidc/v2/pkg/http"
 	"github.com/zitadel/oidc/v2/pkg/oidc"
-    "strings"
-	"strconv"
 	"github.com/lxc/lxd/shared"
 )
 
