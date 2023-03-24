@@ -155,15 +155,24 @@ func (o *oidcClient) refresh(issuer string, clientID string) error {
 	return nil
 }
 
-func (o *oidcClient) getListenerAndPort() (net.Listener, int32) {
+func (o *oidcClient) getListenerAndPort(redirectPorts string) (net.Listener, int32) {
 	var listener net.Listener
 	var err error
 	var port int32
-
+	portList := strings.Split(redirectPorts, ",")
 	// Try getting a port to listen on.
 	for i := 0; i < 10; i++ {
 		// Get random port between 1024 and 65535.
 		port = 1024 + mrand.Int31n(math.MaxUint16-1024)
+		if portList.Length != 0 {
+			if i <= redirectPorts.Length {
+				i, err := strconv.ParseInt(redirectPorts[i].Value, 10, 32)
+				if err != nil {
+   				 panic(err)
+				}
+				port := int32(i)
+			}
+		}
 
 		listener, err = net.Listen("tcp", fmt.Sprintf(":%d", port))
 		if err == nil {
@@ -174,10 +183,10 @@ func (o *oidcClient) getListenerAndPort() (net.Listener, int32) {
 	return listener, port
 }
 
-func (o *oidcClient) authenticate(issuer string, clientID string, parameters map[string]string) error {
+func (o *oidcClient) authenticate(issuer string, clientID string, parameters map[string]string, redirectPorts string) error {
 	var err error
 
-	listener, port := o.getListenerAndPort()
+	listener, port := o.getListenerAndPort(redirectPorts)
 	if listener == nil {
 		return fmt.Errorf("Failed finding free listen port")
 	}
