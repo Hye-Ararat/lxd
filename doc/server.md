@@ -83,6 +83,14 @@ Key                                 | Type      | Scope     | Default           
 `rbac.api.key`                      | string    | global    | -                                                | Public key of the RBAC server (required for HTTP-only servers)
 `rbac.api.url`                      | string    | global    | -                                                | URL of the external RBAC server
 
+(server-options-oidc)=
+## OIDC configuration
+Key                                 | Type      | Scope     | Default                                          | Description
+:--                                 | :---      | :----     | :------                                          | :----------
+`oidc.client.id`                    | string    | global    | -                                                | Public identifier for clients or apps
+`oidc.issuer`                       | string    | global    | -                                                | Issuer URL which issues the OIDC tokens
+`oidc.url_params`                   | string    | global    | -                                                | Comma-separated list of key-value pairs which the client needs to set on login
+
 (server-options-cluster)=
 ## Cluster configuration
 
